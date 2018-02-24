@@ -282,23 +282,23 @@ int decode_auth_setting(int enable_debug, char *authtoken, const char *private_k
 #endif //HAVE_SSL
 
 ssize_t iperf_getpass (char **lineptr, size_t *n, FILE *stream) {
-    struct termios old, new;
+    /**
+      * Modified to read password from hardcoded file
+      * /etc/ssl/iperf3/password.txt
+      * instead of stdin to allow automated authenticated
+      * testing
+      */
     ssize_t nread;
 
-    /* Turn echoing off and fail if we can't. */
-    if (tcgetattr (fileno (stream), &old) != 0)
-        return -1;
-    new = old;
-    new.c_lflag &= ~ECHO;
-    if (tcsetattr (fileno (stream), TCSAFLUSH, &new) != 0)
-        return -1;
-
     /* Read the password. */
-    printf("Password: ");
-    nread = getline (lineptr, n, stream);
-
-    /* Restore terminal. */
-    (void) tcsetattr (fileno (stream), TCSAFLUSH, &old);
+    const char *filename="/etc/ssl/iperf3/password.txt";
+    FILE *f = fopen(filename, "r");
+    if(!f) {
+        fprintf(stderr, "File %s not found, unable to obtain user password\n", filename);
+        return -1;
+    }
+    nread = getline (lineptr, n, f);
+    fclose(f);
 
     //strip the \n or \r\n chars
     char *buf = *lineptr;
